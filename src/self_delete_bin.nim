@@ -15,8 +15,11 @@ import system
 
 var DS_STREAM_RENAME = newWideCString(":wtfbbq")
 
-proc ds_open_handle(pwPath: PWCHAR): HANDLE =
-    return CreateFileW(pwPath, DELETE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)
+proc ds_open_handle(pwPath: PWCHAR, del: bool = false): HANDLE =
+    if del: 
+        return CreateFileW(pwPath, DELETE, 0, NULL, OPEN_EXISTING, FILE_FLAG_DELETE_ON_CLOSE, 0)
+    else:
+        return CreateFileW(pwPath, DELETE, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, 0)
 
 proc ds_rename_handle(hHandle: HANDLE): WINBOOL =
     var fRename: FILE_RENAME_INFO
@@ -57,16 +60,17 @@ when isMainModule:
         echo "[-] Failed to rename to stream"
         quit(QuitFailure)
 
+    if not ds_deposite_handle(hCurrent).bool:
+        echo "[-] Failed to set delete deposition"
+        quit(QuitFailure)
+
+
     echo "[*] Successfully renamed file primary :$DATA ADS to specified stream, closing initial handle"
     CloseHandle(hCurrent)
 
-    hCurrent = ds_open_handle(addr wcPath[0])
+    hCurrent = ds_open_handle(addr wcPath[0], true)
     if hCurrent == INVALID_HANDLE_VALUE:
         echo "[-] Failed to reopen current module"
-        quit(QuitFailure)
-
-    if not ds_deposite_handle(hCurrent).bool:
-        echo "[-] Failed to set delete deposition"
         quit(QuitFailure)
 
     echo "[*] Closing handle to trigger deletion deposition"
